@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FIDS - Flight Information Display System</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap");
+
+      :root {
+        --bg-color: #0d1117;
+        --board-bg: #161b22;
+        --text-color: #c9d1d9;
+        --header-color: #f0b90b;
+        --border-color: #30363d;
+        --status-ontime: #28a745;
+        --status-boarding: #007bff;
+        --status-delayed: #ffc107;
+        --status-cancelled: #dc3545;
+        --status-landed: #17a2b8;
+      }
+
+      body {
+        font-family: "Roboto Mono", monospace;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+      }
+
+      .fids-container {
+        width: 100%;
+        max-width: 1200px;
+        background-color: var(--board-bg);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+      }
+
+      .fids-header {
+        background-color: #000;
+        position: relative; /* [BARU] Agar posisi pesawat absolut terhadap header */
+        overflow: hidden; /* [BARU] Sembunyikan pesawat saat di luar batas */
+        text-align: center;
+        padding: 15px 25px;
+        perspective: 600px; /* [BARU] Menciptakan ruang 3D untuk elemen di dalamnya */
+      }
+
+      /* [DIUBAH] Style untuk judul split-flap */
+      .split-flap-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column; /* [DIUBAH] Tumpuk judul secara vertikal */
+        gap: 10px; /* [DIUBAH] Jarak antar baris judul */
+        padding: 10px 0;
+      }
+
+      .char-box {
+        background-color: #000;
+        color: var(--header-color);
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: clamp(
+          0.9rem,
+          3vw,
+          1.5rem
+        ); /* [DIUBAH] Ukuran font diperkecil */
+        font-weight: 700;
+        line-height: 1;
+        box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.5),
+          0 2px 0 rgba(255, 255, 255, 0.1);
+        text-align: center;
+        min-width: 1.5em;
+        animation: flip-in-char 0.5s ease-out forwards;
+        opacity: 0; /* Mulai dengan tidak terlihat */
+      }
+
+      .char-box.space {
+        background-color: transparent;
+        box-shadow: none;
+      }
+
+      @keyframes flip-in-char {
+        from {
+          transform: perspective(400px) rotateX(90deg);
+          opacity: 0;
+        }
+        to {
+          transform: perspective(400px) rotateX(0deg);
+          opacity: 1;
+        }
+      }
+
+      /* [BARU] Style untuk panel ringkasan di header */
+      .top-summary-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap; /* Agar bisa wrap di layar kecil */
+        gap: 15px;
+        padding: 10px 25px;
+        background-color: #1c2128; /* Warna sedikit lebih terang dari board */
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .summary-time-container {
+        text-align: left;
+        flex-shrink: 0; /* Jangan biarkan menyusut */
+      }
+
+      .summary-time {
+        margin-bottom: 8px;
+      }
+
+      #summary-clock {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--header-color);
+        letter-spacing: 2px;
+      }
+
+      #summary-date {
+        font-size: 0.8rem;
+        color: var(--text-color);
+      }
+
+      #last-updated {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        margin-top: 2px;
+      }
+
+      .summary-counts {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 4px 12px;
+      }
+
+      .count-item {
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        text-transform: uppercase;
+      }
+
+      /* [BARU] Style untuk teks miring (Inggris) */
+      .count-item i {
+        opacity: 0.7;
+        font-style: italic;
+      }
+
+      /* [DIUBAH] Style untuk status yang berkedip ganti bahasa */
+      .status-container {
+        position: relative;
+        min-height: 1.2em; /* Mencegah layout melompat saat teks berganti */
+      }
+
+      .status-lang {
+        display: block;
+        transition: opacity 0.3s ease-in-out;
+      }
+
+      .blinking-status .status-lang.english {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+      }
+
+      .blinking-status .status-lang.indonesian {
+        animation: fade-out-status 4s infinite;
+      }
+      .blinking-status .status-lang.english {
+        animation: fade-in-status 4s infinite;
+      }
+
+      @keyframes fade-out-status {
+        0%,
+        45% {
+          opacity: 1;
+        }
+        50%,
+        100% {
+          opacity: 0;
+        }
+      }
+      @keyframes fade-in-status {
+        0%,
+        45% {
+          opacity: 0;
+        }
+        50%,
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .status-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 5px;
+      }
+
+      /* [BARU] Style untuk judul setiap tabel */
+      .table-section {
+        margin-top: 30px;
+      }
+
+      .table-title {
+        color: var(--header-color);
+        font-size: 1.5rem;
+        margin: 0;
+      }
+
+      .info-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding: 8px 25px;
+        background-color: #21262d;
+        font-size: 0.8rem;
+        border-bottom: 1px solid var(--border-color);
+        overflow: hidden; /* Mencegah teks keluar dari bar */
+      }
+
+      /* [DIUBAH] Style untuk tulisan berjalan menggunakan animasi CSS */
+      .scrolling-text {
+        flex-grow: 1;
+        color: var(--header-color);
+        font-weight: bold;
+        white-space: nowrap;
+        text-transform: uppercase;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .scrolling-text span {
+        display: inline-block;
+        padding-left: 100%;
+        animation: scroll-left 30s linear infinite;
+      }
+
+      @keyframes scroll-left {
+        0% {
+          transform: translateX(0);
+        }
+        100% {
+          transform: translateX(-100%);
+        }
+      }
+
+      /* [BARU] Animasi Pesawat Terbang di Header */
+      .flying-plane {
+        position: absolute;
+        top: 50%;
+        font-size: 3.5rem; /* [DIUBAH] Ukuran pesawat diperbesar lagi */
+        color: var(--header-color);
+        opacity: 0.5;
+        transform: translateY(-50%) translateZ(80px) rotateY(-20deg); /* [DIUBAH] Memberi efek 3D */
+        filter: drop-shadow(
+          10px 15px 8px rgba(0, 0, 0, 0.3)
+        ); /* [BARU] Bayangan yang lebih realistis */
+        animation: fly-across 12s linear infinite;
+        animation-delay: 2s; /* Tunda sedikit sebelum mulai */
+        z-index: 10;
+      }
+
+      @keyframes fly-across {
+        0% {
+          left: -10%;
+        }
+        100% {
+          left: 110%;
+        }
+      }
+
+      .fids-table-wrapper {
+        overflow-x: auto;
+      }
+
+      .fids-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed; /* [BARU] Memastikan lebar kolom konsisten */
+        font-size: 1rem;
+      }
+
+      .fids-table th,
+      .fids-table td {
+        padding: 14px 20px;
+        text-align: left;
+        /* [BARU] Mencegah teks panjang merusak layout */
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .fids-table th {
+        white-space: nowrap;
+      }
+
+      .fids-table thead {
+        background-color: #21262d;
+        color: var(--header-color);
+        text-transform: uppercase;
+      }
+
+      .fids-table tbody tr {
+        border-bottom: 1px solid var(--border-color);
+        transition: background-color 0.3s;
+      }
+
+      .fids-table tbody tr:last-child {
+        border-bottom: none;
+      }
+
+      .fids-table tbody tr:hover {
+        background-color: #21262d;
+      }
+
+      .status {
+        font-weight: bold;
+        text-transform: uppercase;
+      }
+
+      .status-ON-TIME {
+        color: var(--status-ontime);
+      }
+      .status-BOARDING {
+        color: var(--status-boarding);
+      }
+      .status-DELAYED {
+        color: var(--status-delayed);
+      }
+      .status-CANCELLED {
+        color: var(--status-cancelled);
+      }
+      .status-LANDED {
+        color: var(--status-landed);
+      }
+      .status-DEPARTED {
+        color: var(--status-ontime);
+      }
+      .status-GATE-OPEN {
+        color: var(--status-boarding);
+      }
+      .status-LAST-CALL {
+        color: #ff8c00;
+      }
+      .status-TERJADWAL {
+        color: #17a2b8;
+      } /* [BARU] Status untuk Terjadwal */
+      .status-SELESAI {
+        color: var(--status-ontime);
+      } /* [BARU] Status untuk Selesai */
+      .status-NO-DATA-ENTRY {
+        color: #6b7280;
+      } /* [BARU] Status untuk No Data Entry */
+      .status-MENUNGGU {
+        color: #f94144;
+      } /* [DIUBAH] Status untuk Menunggu (Merah Terang) */
+      .status-SEGERA-HADIR {
+        color: #ff8c00;
+      } /* [BARU] Status untuk Segera Hadir (Oranye) */
+
+      .text-yellow-400 {
+        color: #facc15;
+      }
+      .text-cyan-400 {
+        color: #22d3ee;
+      }
+
+      /* [BARU] Style untuk baris yang dibatalkan */
+      .flight-cancelled {
+        opacity: 0.6;
+        background-color: #1c2128 !important; /* Override hover effect */
+      }
+
+      /* [BARU] Animasi untuk Gate yang berkedip */
+      @keyframes blink {
+        50% {
+          color: var(--header-color);
+          background-color: rgba(240, 185, 11, 0.1);
+        }
+      }
+      .blinking-gate {
+        animation: blink 1.5s infinite;
+        font-weight: bold;
+      }
+
+      /* [BARU] Animasi untuk baris yang berkedip (status selesai) */
+      @keyframes row-pulse {
+        50% {
+          background-color: #2a2f37; /* Warna sedikit lebih terang dari hover */
+        }
+      }
+      .row-blinking {
+        animation: row-pulse 2.5s infinite ease-in-out;
+      }
+
+      /* [BARU] Style untuk Carousel Kedatangan */
+      .carousel-viewport {
+        height: 392px; /* Kembali ke tinggi normal untuk 1 baris */
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* [DIUBAH] Logika animasi carousel sekarang menggunakan CSS Keyframes */
+      @keyframes vertical-scroll {
+        from {
+          transform: translateY(0);
+        }
+        to {
+          transform: translateY(
+            -50%
+          ); /* Gulir hingga duplikat pertama terlihat */
+        }
+      }
+
+      #departures-body.scrolling {
+        animation: vertical-scroll 30s linear infinite;
+      }
+
+      /* [BARU] Animasi untuk perubahan status */
+      @keyframes flip-in {
+        from {
+          transform: rotateX(90deg);
+          opacity: 0;
+        }
+        to {
+          transform: rotateX(0deg);
+          opacity: 1;
+        }
+      }
+      .status-flip {
+        animation: flip-in 0.6s ease-out;
+      }
+
+      /* [BARU] Style untuk footer */
+      .fids-footer {
+        padding: 15px;
+        text-align: center;
+        font-size: 0.8rem;
+        color: #6b7280;
+        border-top: 1px solid var(--border-color);
+      }
+
+      /* [DIUBAH] Media query yang lebih detail untuk perangkat tablet dan mobile */
+      @media (max-width: 768px) {
+        body {
+          padding: 10px;
+        }
+        .top-summary-bar {
+          flex-direction: column; /* Tumpuk vertikal di layar kecil */
+          align-items: flex-start;
+        }
+        .fids-table {
+          font-size: 0.9rem;
+        }
+        .fids-table th,
+        .fids-table td {
+          padding: 10px 15px;
+        }
+        .carousel-viewport {
+          height: 330px; /* Kembali ke tinggi normal */
+        }
+      }
+
+      /* [BARU] Media query spesifik untuk smartphone */
+      @media (max-width: 480px) {
+        body {
+          padding: 5px;
+        }
+        .fids-header {
+          padding: 12px 15px;
+        }
+        .fids-header h1 {
+          letter-spacing: 2px;
+        }
+        .table-title {
+          font-size: 1.2rem;
+        }
+        .carousel-viewport {
+          height: 275px; /* Kembali ke tinggi normal */
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="fids-container">
+      <!-- [DIUBAH] Panel ringkasan sekarang di luar header utama -->
+      <div class="top-summary-bar">
+        <div class="summary-time-container">
+          <div id="summary-date"></div>
+          <div id="summary-clock"></div>
+          <div id="last-updated"></div>
+        </div>
+        <div class="summary-counts">
+          <span class="count-item"
+            ><span class="status-dot status-SELESAI"></span>Selesai /
+            <i>Finished</i>: <b id="count-selesai">0</b></span
+          >
+          <span class="count-item"
+            ><span class="status-dot status-TERJADWAL"></span>Terjadwal /
+            <i>Scheduled</i>: <b id="count-terjadwal">0</b></span
+          >
+          <span class="count-item"
+            ><span class="status-dot status-MENUNGGU"></span>Menunggu /
+            <i>Waiting</i>: <b id="count-menunggu">0</b></span
+          >
+          <span class="count-item"
+            ><span class="status-dot status-SEGERA-HADIR"></span>Akan Hadir /
+            <i>Coming Soon</i>: <b id="count-segera-hadir">0</b></span
+          >
+          <span class="count-item"
+            ><span class="status-dot status-NO-DATA-ENTRY"></span>No Data /
+            <i>No Data</i>: <b id="count-no-data-entry">0</b></span
+          >
+        </div>
+      </div>
+
+      <header class="fids-header">
+        <!-- [DIUBAH] Kontainer untuk judul split-flap -->
+        <div class="flying-plane">✈️</div>
+        <div id="split-flap-title" class="split-flap-container"></div>
+      </header>
+      <div class="info-bar">
+        <div class="scrolling-text">
+          <span
+            >SELAMAT DATANG, DI JADWAL VISIT IT INFRASTRUCTURE AND SUPPORT :
+            HEAD OFFICE - CENTRAL KITCHEN - RESTO REGIONAL 3 PERIODE AGUSTUS S/D
+            SEPTEMBER 2025</span
+          >
+        </div>
+      </div>
+
+      <!-- [DIUBAH] Tabel Keberangkatan -->
+      <div class="table-section">
+        <h2
+          class="table-title"
+          style="
+            padding: 10px 25px;
+            background-color: #21262d;
+            border-bottom: 1px solid var(--border-color);
+          "
+        >
+          Keberangkatan
+        </h2>
+        <!-- [DIUBAH] Wrapper sekarang berisi header statis dan viewport carousel -->
+        <div class="fids-table-wrapper">
+          <!-- Tabel untuk Header Statis -->
+          <table class="fids-table" style="border-bottom: none">
+            <colgroup>
+              <col style="width: 5%" />
+              <col style="width: 10%" />
+              <col style="width: 20%" />
+              <col style="width: 30%" />
+              <col style="width: 15%" />
+              <col style="width: 10%" />
+              <col style="width: 10%" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Waktu</th>
+                <th>Tanggal</th>
+                <th>Tujuan</th>
+                <th>Maskapai</th>
+                <th>Status</th>
+                <th>Gate</th>
+              </tr>
+            </thead>
+          </table>
+          <!-- Viewport untuk Carousel Body -->
+          <div class="carousel-viewport">
+            <table class="fids-table">
+              <!-- [DIUBAH] Menambahkan colgroup agar lebar kolom konsisten dengan header */ -->
+              <colgroup>
+                <col style="width: 5%" />
+                <col style="width: 10%" />
+                <col style="width: 20%" />
+                <col style="width: 30%" />
+                <col style="width: 15%" />
+                <col style="width: 10%" />
+                <col style="width: 10%" />
+              </colgroup>
+              <tbody id="departures-body">
+                <!-- Data Keberangkatan akan diinjeksi oleh JS di sini -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- [BARU] Tabel Kedatangan -->
+      <div class="table-section">
+        <h2
+          class="table-title"
+          style="
+            padding: 10px 25px;
+            background-color: #21262d;
+            border-bottom: 1px solid var(--border-color);
+          "
+        >
+          Kedatangan
+        </h2>
+        <!-- [DIUBAH] Wrapper carousel dihapus, kembali ke tabel statis -->
+        <div class="fids-table-wrapper">
+          <table class="fids-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Waktu</th>
+                <th>Tanggal</th>
+                <th>Asal</th>
+                <th>Maskapai</th>
+                <th>Status</th>
+                <th>Gate</th>
+              </tr>
+            </thead>
+            <tbody id="arrivals-body">
+              <!-- Data Kedatangan akan dimasukkan di sini -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- [BARU] Footer dengan Copyright -->
+      <footer class="fids-footer">
+        <p>
+          &copy; 2025 IT INFRASTRUCTURE AND SUPPORT : HEAD OFFICE - CENTRAL
+          KITCHEN - RESTO REGIONAL 3
+        </p>
+      </footer>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // [DIUBAH] Data dipisah kembali untuk setiap tabel
+        const departuresData = [
+          {
+            no: 1,
+            time: "08:00",
+            date: "18 – 19 Agustus 2025",
+            route: "MIE GACOAN MEDAN 2 MARELAN",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A2R3",
+          },
+          {
+            no: 2,
+            time: "08:00",
+            date: "20 - 21 Agustus 2025",
+            route: "MIE GACOAN MEDAN 3 KARYA SARI",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A2R3",
+          },
+          {
+            no: 3,
+            time: "08:00",
+            date: "22 & 25 Agustus 2025",
+            route: "MIE GACOAN MEDAN 4 MONGONSIDI",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A1R3",
+          },
+          {
+            no: 4,
+            time: "08:00",
+            date: "26 - 27 Agustus 2025",
+            route: "MIE GACOAN MEDAN 4 SM RAJA",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A1R3",
+          },
+          {
+            no: 5,
+            time: "08:00",
+            date: "28 - 29 Agustus 2025",
+            route: "MIE GACOAN MEDAN 7 GAPERTA",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A3R3",
+          },
+          {
+            no: 6,
+            time: "08:00",
+            date: "1 - 2 September 2025",
+            route: "MIE GACOAN MEDAN 8 DENAI",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A3R3",
+          },
+          {
+            no: 7,
+            time: "08:00",
+            date: "3 - 4 September 2025",
+            route: "MIE GACOAN MEDAN 9 KAPTEN MUSLIM",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A1R3",
+          },
+          {
+            no: 8,
+            time: "08:00",
+            date: "6 & 8 September 2025",
+            route: "MIE GACOAN MEDAN 10 KRAKATAU",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A1R3",
+          },
+          {
+            no: 9,
+            time: "08:00",
+            date: "9 - 10 September 2025",
+            route: "MIE GACOAN DELI SERDANG 1 PANCING",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A2R3",
+          },
+          {
+            no: 10,
+            time: "08:00",
+            date: "11 - 12 September 2025",
+            route: "MIE GACOAN DELI SERDANG 2 TEMBUNG",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A2R3",
+          },
+          {
+            no: 11,
+            time: "08:00",
+            date: "15 September 2025",
+            route: "MIE GACOAN DELI SERDANG 3 LUBUK PAKAM",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A1R3",
+          },
+          {
+            no: 12,
+            time: "08:00",
+            date: "16 – 17 September 2025",
+            route: "MIE GACOAN BINJAI 1 TENGGIRI",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A3R3",
+          },
+          {
+            no: 13,
+            time: "08:00",
+            date: "25 September 2025",
+            route: "MIE GACOAN MEDAN 6 AH NASUTION",
+            airline: "IT REGIONAL 3",
+            status: "TERJADWAL",
+            gate: "A1R3",
+          },
+          {
+            no: 14,
+            time: "-",
+            date: "-",
+            route: "MIE GACOAN BATAM 1 GOLDEN CITY",
+            airline: "IT REGIONAL 3",
+            status: "NO DATA ENTRY",
+            gate: "A4R3",
+          },
+          {
+            no: 15,
+            time: "-",
+            date: "-",
+            route: "MIE GACOAN BATAM 2 TIBAN",
+            airline: "IT REGIONAL 3",
+            status: "NO DATA ENTRY",
+            gate: "A4R3",
+          },
+          {
+            no: 16,
+            time: "-",
+            date: "-",
+            route: "MIE GACOAN PEKANBARU 1 PANAM",
+            airline: "IT REGIONAL 3",
+            status: "NO DATA ENTRY",
+            gate: "A5R3",
+          },
+          {
+            no: 17,
+            time: "-",
+            date: "-",
+            route: "MIE GACOAN PEKANBARU 2 SUDIRMAN",
+            airline: "IT REGIONAL 3",
+            status: "NO DATA ENTRY",
+            gate: "A5R3",
+          },
+          {
+            no: 18,
+            time: "-",
+            date: "-",
+            route: "MIE GACOAN DUMAI 1 HASSANUDIN",
+            airline: "IT REGIONAL 3",
+            status: "NO DATA ENTRY",
+            gate: "A5R3",
+          },
+          {
+            no: 19,
+            time: "-",
+            date: "-",
+            route: "ACEH 1 PANGLIMA",
+            airline: "-",
+            status: "MENUNGGU",
+            gate: "REGIONAL 4",
+          },
+          {
+            no: 20,
+            time: "-",
+            date: "-",
+            route: "ACEH 2 LANGSA",
+            airline: "-",
+            status: "MENUNGGU",
+            gate: "REGIONAL 4",
+          },
+          {
+            no: 21,
+            time: "-",
+            date: "-",
+            route: "ACEH 3 BATOH",
+            airline: "-",
+            status: "MENUNGGU",
+            gate: "REGIONAL 4",
+          },
+          {
+            no: 22,
+            time: "-",
+            date: "-",
+            route: "ACEH 4 MEULABOH",
+            airline: "-",
+            status: "MENUNGGU",
+            gate: "REGIONAL 4",
+          },
+          {
+            no: 23,
+            time: "-",
+            date: "-",
+            route: "ACEH 5 BIREUN",
+            airline: "-",
+            status: "MENUNGGU",
+            gate: "REGIONAL 4",
+          },
+          {
+            no: 24,
+            time: "-",
+            date: "-",
+            route: "SIANTAR 1 SUDIRMAN",
+            airline: "-",
+            status: "MENUNGGU",
+            gate: "REGIONAL 4",
+          },
+          {
+            no: 25,
+            time: "-",
+            date: "-",
+            route: "RANTAU PRAPAT 1 BAKARAN",
+            airline: "-",
+            status: "MENUNGGU",
+            gate: "REGIONAL 4",
+          },
+          {
+            no: 26,
+            time: "-",
+            date: "-",
+            route: "TANJUNG BALAI 1  SUDIRMAN",
+            airline: "-",
+            status: "SEGERA HADIR",
+            gate: "REGIONAL 4",
+          },
+          {
+            no: 27,
+            time: "-",
+            date: "-",
+            route: "TANJUNG PINANG 1 - UBAN",
+            airline: "-",
+            status: "SEGERA HADIR",
+            gate: "REGIONAL 4",
+          },
+          {
+            no: 28,
+            time: "-",
+            date: "-",
+            route: "LHOKSUMAWE 1",
+            airline: "-",
+            status: "SEGERA HADIR",
+            gate: "REGIONAL 4",
+          },
+          {
+            no: 29,
+            time: "-",
+            date: "-",
+            route: "LANGKAT – STABAT",
+            airline: "-",
+            status: "SEGERA HADIR",
+            gate: "REGIONAL 4",
+          },
+          {
+            no: 30,
+            time: "-",
+            date: "-",
+            route: "SIMALUNGUN – ASAHAN",
+            airline: "-",
+            status: "SEGERA HADIR",
+            gate: "REGIONAL 4",
+          },
+        ];
+
+        // [BARU] Peta terjemahan untuk status
+        const statusTranslations = {
+          SELESAI: "FINISHED",
+          TERJADWAL: "SCHEDULED",
+          MENUNGGU: "WAITING",
+          "SEGERA HADIR": "COMING SOON",
+          "NO DATA ENTRY": "NO DATA",
+        };
+
+        const arrivalsData = [
+          {
+            no: 1,
+            time: "08:00",
+            date: "14 – 15 Agustus 2025",
+            route: "MIE GACOAN MEDAN 1 DR MANSYUR",
+            airline: "IT REGIONAL 3",
+            status: "SELESAI",
+            gate: "A2R3",
+          },
+        ];
+
+        const departuresBody = document.getElementById("departures-body");
+        const arrivalsBody = document.getElementById("arrivals-body");
+        const lastUpdatedEl = document.getElementById("last-updated");
+
+        // [DIUBAH] Fungsi render sekarang menargetkan body tabel spesifik
+        function renderTable(targetBody, flights) {
+          targetBody.innerHTML = "";
+
+          if (flights.length === 0) {
+            const row = document.createElement("tr");
+            row.innerHTML = `<td colspan="7" style="text-align: center; color: #6b7280; padding: 2rem;">Tidak ada data penerbangan.</td>`;
+            targetBody.appendChild(row);
+            return;
+          }
+
+          flights.forEach((flight, index) => {
+            const row = document.createElement("tr");
+            if (flight.status === "CANCELLED") {
+              row.classList.add("flight-cancelled");
+            }
+
+            // [BARU] Tambahkan kelas kedip untuk status SELESAI di tabel kedatangan
+            if (
+              targetBody.id === "arrivals-body" &&
+              flight.status === "SELESAI"
+            ) {
+              row.classList.add("row-blinking");
+            }
+
+            const gateBlinks =
+              flight.status === "BOARDING" || flight.status === "LAST CALL";
+            const statusClass = `status-${flight.status.replace(/ /g, "-")}`;
+            const englishStatus =
+              statusTranslations[flight.status] || flight.status;
+
+            row.innerHTML = `
+              <td>${index + 1}</td>
+              <td>${flight.time}</td>
+              <td>${flight.date}</td>
+              <td>${flight.route}</td>
+              <td>${flight.airline}</td>
+              <td>
+                <div class="status-container blinking-status">
+                  <span class="status ${statusClass} status-lang indonesian">${flight.status.replace(
+              /-/g,
+              " "
+            )}</span>
+                  <span class="status ${statusClass} status-lang english">${englishStatus}</span>
+                </div>
+              </td>
+              <td class="${gateBlinks ? "blinking-gate" : ""}">${
+              flight.gate || "-"
+            }</td>
+            `;
+            targetBody.appendChild(row);
+          });
+        }
+
+        // [BARU] Fungsi untuk membuat judul split-flap
+        function createSplitFlapTitle() {
+          const titles = ["TERMINAL 3", "VISIT IT", "REGIONAL 3", "2025"];
+          const container = document.getElementById("split-flap-title");
+          if (!container) return;
+          container.innerHTML = ""; // Kosongkan kontainer
+
+          let totalCharIndex = 0;
+
+          titles.forEach((title) => {
+            // Buat kontainer untuk setiap baris
+            const lineContainer = document.createElement("div");
+            lineContainer.style.display = "flex";
+            lineContainer.style.gap = "5px";
+
+            title.split("").forEach((char) => {
+              const charBox = document.createElement("div");
+              charBox.classList.add("char-box");
+
+              if (char === " ") {
+                charBox.innerHTML = "&nbsp;";
+                charBox.classList.add("space");
+              } else {
+                charBox.textContent = char;
+              }
+
+              // Animasi muncul satu per satu
+              charBox.style.animationDelay = `${totalCharIndex * 0.04}s`;
+              lineContainer.appendChild(charBox);
+              totalCharIndex++;
+            });
+
+            container.appendChild(lineContainer);
+          });
+        }
+
+        // [BARU] Fungsi untuk menginisialisasi carousel CSS yang mulus
+        function setupContinuousCarousel() {
+          if (departuresData.length <= 7) return; // Hanya aktif jika data lebih dari yang terlihat
+
+          // Duplikasi konten tabel untuk loop yang mulus
+          departuresBody.innerHTML += departuresBody.innerHTML;
+
+          // Hitung durasi animasi berdasarkan jumlah item agar kecepatan konsisten
+          const duration = departuresData.length * 1.2; // 1.2 detik per item
+          departuresBody.style.animationDuration = `${duration}s`;
+          departuresBody.classList.add("scrolling");
+        }
+
+        // [BARU] Fungsi untuk jam dan tanggal di header
+        function updateHeaderClock() {
+          const now = new Date();
+          const timeOptions = {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
+          };
+          const dateOptions = {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          };
+          const timeString = new Intl.DateTimeFormat("id-ID", timeOptions)
+            .format(now)
+            .replace(/\./g, ":");
+          document.getElementById("summary-clock").textContent = timeString;
+          document.getElementById("summary-date").textContent =
+            new Intl.DateTimeFormat("id-ID", dateOptions).format(now);
+          document.getElementById(
+            "last-updated"
+          ).textContent = `Update Terakhir: ${timeString}`;
+        }
+
+        // [BARU] Fungsi untuk menghitung dan menampilkan rekapitulasi status
+        function updateStatusSummary() {
+          const allFlights = [...departuresData, ...arrivalsData];
+          const counts = {
+            SELESAI: 0,
+            TERJADWAL: 0,
+            MENUNGGU: 0,
+            "SEGERA HADIR": 0,
+            "NO DATA ENTRY": 0,
+          };
+
+          allFlights.forEach((flight) => {
+            if (flight.status in counts) {
+              counts[flight.status]++;
+            }
+          });
+
+          document.getElementById("count-selesai").textContent = counts.SELESAI;
+          document.getElementById("count-terjadwal").textContent =
+            counts.TERJADWAL;
+          document.getElementById("count-menunggu").textContent =
+            counts.MENUNGGU;
+          document.getElementById("count-segera-hadir").textContent =
+            counts["SEGERA HADIR"];
+          document.getElementById("count-no-data-entry").textContent =
+            counts["NO DATA ENTRY"];
+        }
+
+        // Inisialisasi
+        renderTable(departuresBody, departuresData);
+        renderTable(arrivalsBody, arrivalsData); // Render awal
+        updateHeaderClock();
+        setInterval(updateHeaderClock, 1000);
+        updateStatusSummary();
+        setupContinuousCarousel(); // [DIUBAH] Panggil fungsi carousel baru
+        createSplitFlapTitle(); // [BARU] Panggil fungsi untuk membuat judul
+      });
+    </script>
+  </body>
+</html>
