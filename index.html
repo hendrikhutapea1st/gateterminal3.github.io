@@ -16,7 +16,7 @@
         --status-ontime: #28a745;
         --status-boarding: #007bff;
         --status-delayed: #ffc107;
-        --status-cancelled: #dc3545;
+        --status-cancelled: #ff4757; /* [DIUBAH] Warna merah dibuat lebih terang dan menyala */
         --status-landed: #17a2b8;
       }
 
@@ -209,6 +209,25 @@
         border-radius: 50%;
         margin-right: 5px;
       }
+      /* [BARU] Warna untuk titik status di ringkasan */
+      .status-dot.status-SELESAI {
+        background-color: var(--status-ontime);
+      }
+      .status-dot.status-TERJADWAL {
+        background-color: #17a2b8;
+      }
+      .status-dot.status-MENUNGGU {
+        background-color: #f94144;
+      }
+      .status-dot.status-SEGERA-HADIR {
+        background-color: #ff8c00;
+      }
+      .status-dot.status-NO-DATA-ENTRY {
+        background-color: #6b7280;
+      }
+      .status-dot.status-CANCELLED {
+        background-color: var(--status-cancelled);
+      }
 
       /* [BARU] Style untuk judul setiap tabel */
       .table-section {
@@ -371,6 +390,9 @@
       .status-SEGERA-HADIR {
         color: #ff8c00;
       } /* [BARU] Status untuk Segera Hadir (Oranye) */
+      .status-BATAL {
+        color: var(--status-cancelled);
+      }
 
       .text-yellow-400 {
         color: #facc15;
@@ -525,6 +547,10 @@
             ><span class="status-dot status-NO-DATA-ENTRY"></span>No Data /
             <i>No Data</i>: <b id="count-no-data-entry">0</b></span
           >
+          <span class="count-item"
+            ><span class="status-dot status-CANCELLED"></span>Batal /
+            <i>Cancelled</i>: <b id="count-batal">0</b></span
+          >
         </div>
       </div>
 
@@ -647,21 +673,12 @@
         // [DIUBAH] Data dipisah kembali untuk setiap tabel
         const departuresData = [
           {
-            no: 1,
-            time: "08:00",
-            date: "18 – 19 Agustus 2025",
-            route: "MIE GACOAN MEDAN 2 MARELAN",
-            airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
-            gate: "A2R3",
-          },
-          {
             no: 2,
             time: "08:00",
             date: "20 - 21 Agustus 2025",
             route: "MIE GACOAN MEDAN 3 KARYA SARI",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A2R3",
           },
           {
@@ -670,16 +687,16 @@
             date: "22 & 25 Agustus 2025",
             route: "MIE GACOAN MEDAN 4 MONGONSIDI",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A1R3",
           },
           {
             no: 4,
             time: "08:00",
             date: "26 - 27 Agustus 2025",
-            route: "MIE GACOAN MEDAN 4 SM RAJA",
+            route: "MIE GACOAN MEDAN 5 SM RAJA",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A1R3",
           },
           {
@@ -688,7 +705,7 @@
             date: "28 - 29 Agustus 2025",
             route: "MIE GACOAN MEDAN 7 GAPERTA",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A3R3",
           },
           {
@@ -697,7 +714,7 @@
             date: "1 - 2 September 2025",
             route: "MIE GACOAN MEDAN 8 DENAI",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A3R3",
           },
           {
@@ -706,7 +723,7 @@
             date: "3 - 4 September 2025",
             route: "MIE GACOAN MEDAN 9 KAPTEN MUSLIM",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A1R3",
           },
           {
@@ -715,7 +732,7 @@
             date: "6 & 8 September 2025",
             route: "MIE GACOAN MEDAN 10 KRAKATAU",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A1R3",
           },
           {
@@ -724,7 +741,7 @@
             date: "9 - 10 September 2025",
             route: "MIE GACOAN DELI SERDANG 1 PANCING",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A2R3",
           },
           {
@@ -733,7 +750,7 @@
             date: "11 - 12 September 2025",
             route: "MIE GACOAN DELI SERDANG 2 TEMBUNG",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A2R3",
           },
           {
@@ -742,7 +759,7 @@
             date: "15 September 2025",
             route: "MIE GACOAN DELI SERDANG 3 LUBUK PAKAM",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A1R3",
           },
           {
@@ -751,7 +768,7 @@
             date: "16 – 17 September 2025",
             route: "MIE GACOAN BINJAI 1 TENGGIRI",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A3R3",
           },
           {
@@ -760,7 +777,7 @@
             date: "25 September 2025",
             route: "MIE GACOAN MEDAN 6 AH NASUTION",
             airline: "IT REGIONAL 3",
-            status: "TERJADWAL",
+            status: "BATAL",
             gate: "A1R3",
           },
           {
@@ -769,7 +786,7 @@
             date: "-",
             route: "MIE GACOAN BATAM 1 GOLDEN CITY",
             airline: "IT REGIONAL 3",
-            status: "NO DATA ENTRY",
+            status: "BATAL",
             gate: "A4R3",
           },
           {
@@ -778,7 +795,7 @@
             date: "-",
             route: "MIE GACOAN BATAM 2 TIBAN",
             airline: "IT REGIONAL 3",
-            status: "NO DATA ENTRY",
+            status: "BATAL",
             gate: "A4R3",
           },
           {
@@ -787,7 +804,7 @@
             date: "-",
             route: "MIE GACOAN PEKANBARU 1 PANAM",
             airline: "IT REGIONAL 3",
-            status: "NO DATA ENTRY",
+            status: "BATAL",
             gate: "A5R3",
           },
           {
@@ -796,7 +813,7 @@
             date: "-",
             route: "MIE GACOAN PEKANBARU 2 SUDIRMAN",
             airline: "IT REGIONAL 3",
-            status: "NO DATA ENTRY",
+            status: "BATAL",
             gate: "A5R3",
           },
           {
@@ -805,7 +822,7 @@
             date: "-",
             route: "MIE GACOAN DUMAI 1 HASSANUDIN",
             airline: "IT REGIONAL 3",
-            status: "NO DATA ENTRY",
+            status: "BATAL",
             gate: "A5R3",
           },
           {
@@ -814,7 +831,7 @@
             date: "-",
             route: "ACEH 1 PANGLIMA",
             airline: "-",
-            status: "MENUNGGU",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
           {
@@ -823,7 +840,7 @@
             date: "-",
             route: "ACEH 2 LANGSA",
             airline: "-",
-            status: "MENUNGGU",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
           {
@@ -832,7 +849,7 @@
             date: "-",
             route: "ACEH 3 BATOH",
             airline: "-",
-            status: "MENUNGGU",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
           {
@@ -841,7 +858,7 @@
             date: "-",
             route: "ACEH 4 MEULABOH",
             airline: "-",
-            status: "MENUNGGU",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
           {
@@ -850,7 +867,7 @@
             date: "-",
             route: "ACEH 5 BIREUN",
             airline: "-",
-            status: "MENUNGGU",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
           {
@@ -859,7 +876,7 @@
             date: "-",
             route: "SIANTAR 1 SUDIRMAN",
             airline: "-",
-            status: "MENUNGGU",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
           {
@@ -868,7 +885,7 @@
             date: "-",
             route: "RANTAU PRAPAT 1 BAKARAN",
             airline: "-",
-            status: "MENUNGGU",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
           {
@@ -877,7 +894,7 @@
             date: "-",
             route: "TANJUNG BALAI 1  SUDIRMAN",
             airline: "-",
-            status: "SEGERA HADIR",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
           {
@@ -886,7 +903,7 @@
             date: "-",
             route: "TANJUNG PINANG 1 - UBAN",
             airline: "-",
-            status: "SEGERA HADIR",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
           {
@@ -895,7 +912,7 @@
             date: "-",
             route: "LHOKSUMAWE 1",
             airline: "-",
-            status: "SEGERA HADIR",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
           {
@@ -904,7 +921,7 @@
             date: "-",
             route: "LANGKAT – STABAT",
             airline: "-",
-            status: "SEGERA HADIR",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
           {
@@ -913,7 +930,7 @@
             date: "-",
             route: "SIMALUNGUN – ASAHAN",
             airline: "-",
-            status: "SEGERA HADIR",
+            status: "BATAL",
             gate: "REGIONAL 4",
           },
         ];
@@ -925,6 +942,7 @@
           MENUNGGU: "WAITING",
           "SEGERA HADIR": "COMING SOON",
           "NO DATA ENTRY": "NO DATA",
+          BATAL: "CANCELLED",
         };
 
         const arrivalsData = [
@@ -933,6 +951,15 @@
             time: "08:00",
             date: "14 – 15 Agustus 2025",
             route: "MIE GACOAN MEDAN 1 DR MANSYUR",
+            airline: "IT REGIONAL 3",
+            status: "SELESAI",
+            gate: "A2R3",
+          },
+          {
+            no: 2,
+            time: "08:00",
+            date: "18 – 19 Agustus 2025",
+            route: "MIE GACOAN MEDAN 2 MARELAN",
             airline: "IT REGIONAL 3",
             status: "SELESAI",
             gate: "A2R3",
@@ -956,7 +983,7 @@
 
           flights.forEach((flight, index) => {
             const row = document.createElement("tr");
-            if (flight.status === "CANCELLED") {
+            if (flight.status === "CANCELLED" || flight.status === "BATAL") {
               row.classList.add("flight-cancelled");
             }
 
@@ -1080,6 +1107,7 @@
             MENUNGGU: 0,
             "SEGERA HADIR": 0,
             "NO DATA ENTRY": 0,
+            BATAL: 0,
           };
 
           allFlights.forEach((flight) => {
@@ -1097,6 +1125,7 @@
             counts["SEGERA HADIR"];
           document.getElementById("count-no-data-entry").textContent =
             counts["NO DATA ENTRY"];
+          document.getElementById("count-batal").textContent = counts["BATAL"];
         }
 
         // Inisialisasi
